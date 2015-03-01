@@ -238,9 +238,11 @@ function! s:setup_buffer_enter() "{{{
   elseif g:vimwiki_folding ==? 'syntax'
     setlocal fdm=syntax
     setlocal foldtext=VimwikiFoldText()
-  else
-    setlocal fdm=manual
-    exe "normal zE"
+  " [mariodpros] It breaks my foldings on the KB so I comment out this else block.
+  " https://code.google.com/p/vimwiki/issues/detail?id=415
+  "else
+    "setlocal fdm=manual
+    "exe "normal zE"
   endif
 
   " And conceal level too.
