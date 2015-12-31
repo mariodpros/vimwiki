@@ -289,6 +289,27 @@ function! s:tag_strong(value, header_ids) "{{{
         \ .id.'">'.text.'</strong>'
 endfunction "}}}
 
+function! s:tag_tags(value, header_ids) "{{{
+  let complete_id = ''
+  for level in range(6)
+    if a:header_ids[level][0] != ''
+      let complete_id .= a:header_ids[level][0].'-'
+    endif
+  endfor
+  if a:header_ids[5][0] == ''
+    let complete_id = complete_id[:-2]
+  endif
+  let complete_id = s:safe_html_anchor(complete_id)
+
+  let result = []
+  for tag in split(a:value, ':')
+    let id = s:safe_html_anchor(tag)
+    call add(result, '<span id="'.complete_id.'-'.id.'"></span><span class="tag" id="'
+          \ .id.'">'.tag.'</span>')
+  endfor
+  return join(result)
+endfunction "}}}
+
 function! s:tag_todo(value) "{{{
   return '<span class="todo">'.a:value.'</span>'
 endfunction "}}}
@@ -375,11 +396,6 @@ function! s:tag_wikiincl(value) "{{{
 
     let link_infos = vimwiki#base#resolve_link(url_0)
 
-    " TODO: migrate non-essential debugging messages into g:VimwikiLog
-    if g:vimwiki_debug > 1
-      echom string(link_infos)
-    endif
-
     if link_infos.scheme =~# '\mlocal\|wiki\d\+\|diary'
       let url = vimwiki#path#relpath(fnamemodify(s:current_html_file, ':h'),
             \ link_infos.filename)
@@ -432,12 +448,6 @@ function! s:tag_wikilink(value) "{{{
       endif
     else " other schemes, like http, are left untouched
       let html_link = link_infos.filename
-    endif
-
-    " generate html output
-    " TODO: migrate non-essential debugging messages into g:VimwikiLog
-    if g:vimwiki_debug > 1
-      echom string(link_infos)
     endif
 
     if link_infos.anchor != ''
@@ -554,6 +564,7 @@ function! s:process_tags_typefaces(line, header_ids) "{{{
   let line = s:make_tag(line, g:vimwiki_rxSubScript, 's:tag_sub')
   let line = s:make_tag(line, g:vimwiki_rxCode, 's:tag_code')
   let line = s:make_tag(line, g:vimwiki_rxEqIn, 's:tag_eqin')
+  let line = s:make_tag(line, g:vimwiki_rxTags, 's:tag_tags', a:header_ids)
   return line
 endfunction " }}}
 
@@ -1356,9 +1367,6 @@ function! vimwiki#html#CustomWiki2HTML(path, wikifile, force) "{{{
 endfunction " }}}
 
 function! vimwiki#html#Wiki2HTML(path_html, wikifile) "{{{
-
-  let starttime = reltime()  " start the clock
-
   let done = 0
 
   let wikifile = fnamemodify(a:wikifile, ":p")
@@ -1380,10 +1388,6 @@ function! vimwiki#html#Wiki2HTML(path_html, wikifile) "{{{
   if s:syntax_supported() && done == 0
     let lsource = readfile(wikifile)
     let ldest = []
-
-    "if g:vimwiki_debug
-    "  echo 'Generating HTML ... '
-    "endif
 
     call vimwiki#path#mkdir(path_html)
 
@@ -1489,7 +1493,7 @@ function! vimwiki#html#Wiki2HTML(path_html, wikifile) "{{{
     call map(html_lines, 'substitute(v:val, "%encoding%", "'. enc .'", "g")')
 
     let html_lines = s:html_insert_contents(html_lines, ldest) " %contents%
-    
+
     "" make html file.
     call writefile(html_lines, path_html.htmlfile)
     let done = 1
@@ -1500,13 +1504,6 @@ function! vimwiki#html#Wiki2HTML(path_html, wikifile) "{{{
     echomsg 'vimwiki: conversion to HTML is not supported for this syntax!!!'
     return
   endif
-
-  " measure the elapsed time 
-  let time1 = vimwiki#u#time(starttime)  "XXX
-  call VimwikiLog_extend('html',[htmlfile,time1])
-  "if g:vimwiki_debug
-  "  echon "\r".htmlfile.' written (time: '.time1.'s)'
-  "endif
 
   return path_html.htmlfile
 endfunction "}}}
